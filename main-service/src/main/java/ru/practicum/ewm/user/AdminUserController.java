@@ -14,10 +14,10 @@ public class AdminUserController {
     private final UserService service;
 
     @GetMapping
-    public List<UserDto> getAll(@RequestParam(required = false) List<Long> ids,
+    public List<UserDto> findAll(@RequestParam(required = false) List<Long> ids,
                                 @RequestParam(defaultValue = "0") int from,
                                 @RequestParam(defaultValue = "10") int size) {
-        return service.getAll(ids, from, size);
+        return service.findAll(ids, from, size);
     }
 
     @PostMapping
@@ -28,7 +28,7 @@ public class AdminUserController {
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void deleteUser(@PathVariable long id) {
+    public void delete(@PathVariable long id) {
         service.delete(id);
     }
 }

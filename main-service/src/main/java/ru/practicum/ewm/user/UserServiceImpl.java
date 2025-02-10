@@ -16,7 +16,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<UserDto> getAll(List<Long> ids, int from, int size) {
+    public List<UserDto> findAll(List<Long> ids, int from, int size) {
         Pageable pageable = PageRequest.of(from, size);
 
         if (ids != null && !ids.isEmpty()) {
