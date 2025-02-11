@@ -35,7 +35,7 @@ public class StatsClient extends BaseClient {
                 .registerModule(new JavaTimeModule())
                 .convertValue(
                         get("/stats?start={start}&end={end}&uris={uris}&unique={unique}",
-                                Map.of("start", start, "end", end, "uris", uris, "unique", unique)
+                                Map.of("start", start, "end", end, "uris", String.join(", ", uris), "unique", unique)
                         ).getBody(),
                         new TypeReference<>() {}
                 );
