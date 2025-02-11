@@ -6,7 +6,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.practicum.ewm.category.Category;
 import ru.practicum.ewm.category.CategoryRepository;
-import ru.practicum.ewm.client.stats.StatsClient;
+import ru.practicum.ewm.client.stats.RestStatClient;
 import ru.practicum.ewm.dto.StatsView;
 import ru.practicum.ewm.exception.ConditionsNotMetException;
 import ru.practicum.ewm.exception.ValidationException;
@@ -30,7 +30,7 @@ public class EventServiceImpl implements EventService {
     private final CategoryRepository categoryRepository;
     private final RequestRepository requestRepository;
     private final UserRepository userRepository;
-    private final StatsClient statsClient;
+    private final RestStatClient statsClient;
 
     @Override
     public List<EventDto.Response.Private> findAllBy(List<Long> users, List<String> states, List<Long> categories, LocalDateTime start, LocalDateTime end, int from, int size) {
@@ -155,8 +155,10 @@ public class EventServiceImpl implements EventService {
 
         if (sort != null) {
             return switch (sort) {
-                case VIEWS -> eventsWithViews.stream().sorted(Comparator.comparing(EventDto.Response.Public::getViews)).toList();
-                case EVENT_DATE -> eventsWithViews.stream().sorted(Comparator.comparing(EventDto.Response.Public::getEventDate)).toList();
+                case VIEWS ->
+                        eventsWithViews.stream().sorted(Comparator.comparing(EventDto.Response.Public::getViews)).toList();
+                case EVENT_DATE ->
+                        eventsWithViews.stream().sorted(Comparator.comparing(EventDto.Response.Public::getEventDate)).toList();
             };
         }
 

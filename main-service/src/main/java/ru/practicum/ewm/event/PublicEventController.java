@@ -4,7 +4,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
-import ru.practicum.ewm.client.stats.StatsClient;
+import ru.practicum.ewm.client.stats.RestStatClient;
 import ru.practicum.ewm.dto.EndpointHitDto;
 import ru.practicum.ewm.exception.ValidationException;
 
@@ -19,7 +19,7 @@ public class PublicEventController {
     private static final String PATTERN = "yyyy-MM-dd HH:mm:ss";
     private static final String APP_NAME = "ewm-main-service";
     private final EventService service;
-    private final StatsClient client;
+    private final RestStatClient client;
 
     @GetMapping
     public List<EventDto.Response.Public> findAllBy(
