@@ -10,6 +10,8 @@ import ru.practicum.ewm.client.stats.StatsClient;
 import ru.practicum.ewm.dto.StatsView;
 import ru.practicum.ewm.exception.ConditionsNotMetException;
 import ru.practicum.ewm.exception.ValidationException;
+import ru.practicum.ewm.requests.RequestRepository;
+import ru.practicum.ewm.requests.RequestStatus;
 import ru.practicum.ewm.user.User;
 import ru.practicum.ewm.user.UserRepository;
 
@@ -26,19 +28,22 @@ public class EventServiceImpl implements EventService {
     private final EventRepository eventRepository;
     private final LocationRepository locationRepository;
     private final CategoryRepository categoryRepository;
+    private final RequestRepository requestRepository;
     private final UserRepository userRepository;
     private final StatsClient statsClient;
 
     @Override
     public List<EventDto.Response.Private> findAllBy(List<Long> users, List<String> states, List<Long> categories, LocalDateTime start, LocalDateTime end, int from, int size) {
-        return eventRepository.findAllBy(
+        List<Event> events = eventRepository.findAllBy(
                 users,
                 states,
                 categories,
                 start == null ? LocalDateTime.now() : start,
                 end == null ? LocalDateTime.now().plusYears(1) : end,
                 PageRequest.of(from, size)
-        ).stream().map(EventMapper::mapToEventFullDto).toList();
+        );
+        Map<Long, Long> hits = getViewsToMap(setConfirmedRequests(events), true);
+        return events.stream().map(event -> EventMapper.mapToEventFullDto(event,  hits.getOrDefault(event.getId(), 0L))).toList();
     }
 
     @Override
@@ -91,7 +96,8 @@ public class EventServiceImpl implements EventService {
 
     @Override
     public List<EventDto.Response.Public> findAllByUser(long userId, int from, int size) {
-        return eventRepository.findAllByInitiatorId(userId, PageRequest.of(from, size)).stream().map(EventMapper::mapToShortEventDto).toList();
+        return setConfirmedRequests(eventRepository.findAllByInitiatorId(userId, PageRequest.of(from, size)))
+                .stream().map(EventMapper::mapToShortEventDto).toList();
     }
 
     @Override
@@ -143,7 +149,7 @@ public class EventServiceImpl implements EventService {
                 PageRequest.of(from, size)
         );
 
-        Map<Long, Long> hits = getViewsToMap(events, true);
+        Map<Long, Long> hits = getViewsToMap(setConfirmedRequests(events), true);
         List<EventDto.Response.Public> eventsWithViews = events.stream()
                 .map(event -> EventMapper.mapToShortEventDto(event,  hits.get(event.getId()))).toList();
 
@@ -163,6 +169,7 @@ public class EventServiceImpl implements EventService {
         if (event.getState() != EventState.PUBLISHED) {
             throw new NoSuchElementException("event unpublished");
         }
+        event.setConfirmedRequests(requestRepository.countByEventIdAndStatus(id, RequestStatus.CONFIRMED));
         long views = getViewsToMap(event.getPublishedOn(), LocalDateTime.now(), List.of("/events/" + id), true)
                 .getOrDefault(id, 1L);
         return EventMapper.mapToEventFullDto(event, views);
@@ -200,9 +207,15 @@ public class EventServiceImpl implements EventService {
         }
     }
 
+    private List<Event> setConfirmedRequests(List<Event> events) {
+        return events.stream().peek(event -> event.setConfirmedRequests(requestRepository.countByEventIdAndStatus(
+                event.getId(), RequestStatus.CONFIRMED))).toList();
+    }
+
     private Map<Long, Long> getViewsToMap(List<Event> events, boolean unique) {
         List<String> uris = events.stream().map(elem -> String.format("/events/%d", elem.getId())).toList();
-        LocalDateTime startDate = events.stream().map(Event::getPublishedOn).min(LocalDateTime::compareTo).orElse(LocalDateTime.MIN);
+        LocalDateTime startDate = events.stream().map(Event::getPublishedOn).filter(Objects::nonNull)
+                .min(LocalDateTime::compareTo).orElse(LocalDateTime.now().minusYears(10));
         return getViewsToMap(startDate, LocalDateTime.now(), uris, unique);
     }
 
