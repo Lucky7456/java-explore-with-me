@@ -216,7 +216,9 @@ public class EventServiceImpl implements EventService {
         List<String> uris = events.stream().map(elem -> String.format("/events/%d", elem.getId())).toList();
         LocalDateTime startDate = events.stream().map(Event::getPublishedOn).filter(Objects::nonNull)
                 .min(LocalDateTime::compareTo).orElse(LocalDateTime.now().minusYears(10));
-        return getViewsToMap(startDate, LocalDateTime.now(), uris, unique);
+        LocalDateTime endDate = events.stream().map(Event::getEventDate).filter(Objects::nonNull)
+                .max(LocalDateTime::compareTo).orElse(LocalDateTime.now().plusYears(100));
+        return getViewsToMap(startDate, endDate, uris, unique);
     }
 
     private Map<Long, Long> getViewsToMap(LocalDateTime start, LocalDateTime end, List<String> uris, Boolean unique) {
