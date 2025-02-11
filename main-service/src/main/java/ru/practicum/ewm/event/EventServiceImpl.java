@@ -42,8 +42,7 @@ public class EventServiceImpl implements EventService {
                 end == null ? LocalDateTime.now().plusYears(1) : end,
                 PageRequest.of(from, size)
         );
-        Map<Long, Long> hits = getViewsToMap(setConfirmedRequests(events), true);
-        return events.stream().map(event -> EventMapper.mapToEventFullDto(event, hits.getOrDefault(event.getId(), 0L))).toList();
+        return setConfirmedRequests(events).stream().map(EventMapper::mapToEventFullDto).toList();
     }
 
     @Override
