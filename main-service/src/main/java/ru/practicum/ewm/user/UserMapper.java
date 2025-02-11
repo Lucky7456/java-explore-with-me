@@ -13,7 +13,7 @@ public final class UserMapper {
         );
     }
 
-    public static User mapToUser(NewUserRequest  newUserRequest) {
+    public static User mapToUser(NewUserRequest newUserRequest) {
         return new User(
                 0,
                 newUserRequest.getName(),

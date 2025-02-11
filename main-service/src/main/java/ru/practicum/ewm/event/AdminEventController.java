@@ -30,7 +30,7 @@ public class AdminEventController {
 
     @PatchMapping("/{eventId}")
     public EventDto.Response.Private adminUpdate(@PathVariable long eventId,
-                                                 @Valid @RequestBody EventDto.Request.AdminUpdate updateEventAdminRequest){
-        return service.update(eventId,updateEventAdminRequest);
+                                                 @Valid @RequestBody EventDto.Request.AdminUpdate updateEventAdminRequest) {
+        return service.update(eventId, updateEventAdminRequest);
     }
 }

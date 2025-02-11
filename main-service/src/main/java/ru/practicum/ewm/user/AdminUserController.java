@@ -15,8 +15,8 @@ public class AdminUserController {
 
     @GetMapping
     public List<UserDto> findAll(@RequestParam(required = false) List<Long> ids,
-                                @RequestParam(defaultValue = "0") int from,
-                                @RequestParam(defaultValue = "10") int size) {
+                                 @RequestParam(defaultValue = "0") int from,
+                                 @RequestParam(defaultValue = "10") int size) {
         return service.findAll(ids, from, size);
     }
 

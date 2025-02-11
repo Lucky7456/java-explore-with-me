@@ -43,7 +43,7 @@ public class EventServiceImpl implements EventService {
                 PageRequest.of(from, size)
         );
         Map<Long, Long> hits = getViewsToMap(setConfirmedRequests(events), true);
-        return events.stream().map(event -> EventMapper.mapToEventFullDto(event,  hits.getOrDefault(event.getId(), 0L))).toList();
+        return events.stream().map(event -> EventMapper.mapToEventFullDto(event, hits.getOrDefault(event.getId(), 0L))).toList();
     }
 
     @Override
@@ -51,7 +51,7 @@ public class EventServiceImpl implements EventService {
     public EventDto.Response.Private update(long eventId, EventDto.Request.AdminUpdate request) {
         Event event = eventRepository.findById(eventId).orElseThrow();
 
-        if (request.getEventDate() != null && LocalDateTime.parse(request.getEventDate(),  FORMATTER).isBefore(LocalDateTime.now().plusHours(1))) {
+        if (request.getEventDate() != null && LocalDateTime.parse(request.getEventDate(), FORMATTER).isBefore(LocalDateTime.now().plusHours(1))) {
             throw new ValidationException("Date must be no earlier than an hour from the date of publication");
         }
 
@@ -151,7 +151,7 @@ public class EventServiceImpl implements EventService {
 
         Map<Long, Long> hits = getViewsToMap(setConfirmedRequests(events), true);
         List<EventDto.Response.Public> eventsWithViews = events.stream()
-                .map(event -> EventMapper.mapToShortEventDto(event,  hits.get(event.getId()))).toList();
+                .map(event -> EventMapper.mapToShortEventDto(event, hits.get(event.getId()))).toList();
 
         if (sort != null) {
             return switch (sort) {
@@ -223,12 +223,12 @@ public class EventServiceImpl implements EventService {
 
     private Map<Long, Long> getViewsToMap(LocalDateTime start, LocalDateTime end, List<String> uris, Boolean unique) {
         return statsClient.getStats(start, end, uris, unique).stream().collect(
-                Collectors.toMap(event-> getIdFromUri(event.getUri()), StatsView::getHits)
+                Collectors.toMap(event -> getIdFromUri(event.getUri()), StatsView::getHits)
         );
     }
 
     private Long getIdFromUri(String uri) {
         return uri.isBlank() ? 0 : Arrays.stream(uri.split("/")).skip(1)
-                .filter(e->e.chars().allMatch(Character::isDigit)).map(Long::valueOf).toList().getFirst();
+                .filter(e -> e.chars().allMatch(Character::isDigit)).map(Long::valueOf).toList().getFirst();
     }
 }

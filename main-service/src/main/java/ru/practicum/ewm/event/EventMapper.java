@@ -13,6 +13,7 @@ import java.time.format.DateTimeFormatter;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class EventMapper {
     public static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+
     public static EventDto.Response.Private mapToEventFullDto(Event event) {
         return mapToEventFullDto(event, 0);
     }

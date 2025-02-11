@@ -9,7 +9,6 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-import java.util.Arrays;
 import java.util.NoSuchElementException;
 
 @RestControllerAdvice
@@ -35,7 +34,7 @@ public class ErrorHandler {
     @ExceptionHandler
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     public ErrorResponse handleException(final Exception ignored) {
-        return new ErrorResponse("Unexpected exception." + ignored.getMessage() + "%n" + Arrays.toString(ignored.getStackTrace()));
+        return new ErrorResponse("Unexpected exception.");
     }
 
     public record ErrorResponse(String error) {
