@@ -33,7 +33,12 @@ public class EventServiceImpl implements EventService {
     private final RestStatClient statsClient;
 
     @Override
-    public List<EventDto.Response.Private> findAllBy(List<Long> users, List<String> states, List<Long> categories, LocalDateTime start, LocalDateTime end, int from, int size) {
+    public List<EventDto.Response.Private> findAllBy(List<Long> users,
+                                                     List<String> states,
+                                                     List<Long> categories,
+                                                     LocalDateTime start,
+                                                     LocalDateTime end,
+                                                     int from, int size) {
         List<Event> events = eventRepository.findAllBy(
                 users,
                 states,
@@ -50,17 +55,7 @@ public class EventServiceImpl implements EventService {
     public EventDto.Response.Private update(long eventId, EventDto.Request.AdminUpdate request) {
         Event event = eventRepository.findById(eventId).orElseThrow();
 
-        if (request.getEventDate() != null && LocalDateTime.parse(request.getEventDate(), FORMATTER).isBefore(LocalDateTime.now().plusHours(1))) {
-            throw new ValidationException("Date must be no earlier than an hour from the date of publication");
-        }
-
-        if (request.getStateAction() == AdminActionState.PUBLISH_EVENT && event.getState() != EventState.PENDING) {
-            throw new ConditionsNotMetException("Only pending events can be changed");
-        }
-
-        if (request.getStateAction() == AdminActionState.REJECT_EVENT && event.getState() == EventState.PUBLISHED) {
-            throw new ConditionsNotMetException("Only unpublished events can be rejected");
-        }
+        validationOnAdminUpdate(request, event);
 
         if (request.getStateAction() != null) {
             if (request.getStateAction() == AdminActionState.PUBLISH_EVENT) {
@@ -111,17 +106,7 @@ public class EventServiceImpl implements EventService {
         User initiator = userRepository.findById(userId).orElseThrow();
         Event event = eventRepository.findById(eventId).orElseThrow();
 
-        if (initiator.getId() != event.getInitiator().getId()) {
-            throw new ConditionsNotMetException("Only initiator can change the event.");
-        }
-
-        if (event.getState() == EventState.PUBLISHED) {
-            throw new ConditionsNotMetException("Only unpublished events can be changed.");
-        }
-
-        if (request.getEventDate() != null && LocalDateTime.parse(request.getEventDate(), FORMATTER).isBefore(LocalDateTime.now().plusHours(2))) {
-            throw new ValidationException("Date must be no earlier than two hours from now.");
-        }
+        validationOnUserUpdate(request, event, initiator);
 
         if (request.getStateAction() != null) {
             if (request.getStateAction() == UserActionState.SEND_TO_REVIEW) {
@@ -137,7 +122,14 @@ public class EventServiceImpl implements EventService {
     }
 
     @Override
-    public List<EventDto.Response.Public> findAllBy(String text, List<Long> categories, Boolean paid, LocalDateTime start, LocalDateTime end, Boolean onlyAvailable, EventSortState sort, int from, int size) {
+    public List<EventDto.Response.Public> findAllBy(String text,
+                                                    List<Long> categories,
+                                                    Boolean paid,
+                                                    LocalDateTime start,
+                                                    LocalDateTime end,
+                                                    Boolean onlyAvailable,
+                                                    EventSortState sort,
+                                                    int from, int size) {
         List<Event> events = eventRepository.findAllBy(
                 text,
                 categories,
@@ -209,8 +201,9 @@ public class EventServiceImpl implements EventService {
     }
 
     private List<Event> setConfirmedRequests(List<Event> events) {
-        return events.stream().peek(event -> event.setConfirmedRequests(requestRepository.countByEventIdAndStatus(
-                event.getId(), RequestStatus.CONFIRMED))).toList();
+        Map<Long, Long> requestMap = requestRepository.findAllByEventIdInAndStatus(events.stream().map(Event::getId).toList(),
+                RequestStatus.CONFIRMED).stream().collect(Collectors.groupingBy(r -> r.getEvent().getId(), Collectors.counting()));
+        return events.stream().peek(e -> e.setConfirmedRequests(requestMap.getOrDefault(e.getId(), 0L))).toList();
     }
 
     private Map<Long, Long> getViewsToMap(List<Event> events, boolean unique) {
@@ -231,5 +224,33 @@ public class EventServiceImpl implements EventService {
     private Long getIdFromUri(String uri) {
         return uri.isBlank() ? 0 : Arrays.stream(uri.split("/")).skip(1)
                 .filter(e -> e.chars().allMatch(Character::isDigit)).map(Long::valueOf).toList().getFirst();
+    }
+
+    private void validationOnUserUpdate(EventDto.Request.UserUpdate request, Event event, User initiator) {
+        if (initiator.getId() != event.getInitiator().getId()) {
+            throw new ConditionsNotMetException("Only initiator can change the event.");
+        }
+
+        if (event.getState() == EventState.PUBLISHED) {
+            throw new ConditionsNotMetException("Only unpublished events can be changed.");
+        }
+
+        if (request.getEventDate() != null && LocalDateTime.parse(request.getEventDate(), FORMATTER).isBefore(LocalDateTime.now().plusHours(2))) {
+            throw new ValidationException("Date must be no earlier than two hours from now.");
+        }
+    }
+
+    private void validationOnAdminUpdate(EventDto.Request.AdminUpdate request, Event event) {
+        if (request.getEventDate() != null && LocalDateTime.parse(request.getEventDate(), FORMATTER).isBefore(LocalDateTime.now().plusHours(1))) {
+            throw new ValidationException("Date must be no earlier than an hour from the date of publication");
+        }
+
+        if (request.getStateAction() == AdminActionState.PUBLISH_EVENT && event.getState() != EventState.PENDING) {
+            throw new ConditionsNotMetException("Only pending events can be changed");
+        }
+
+        if (request.getStateAction() == AdminActionState.REJECT_EVENT && event.getState() == EventState.PUBLISHED) {
+            throw new ConditionsNotMetException("Only unpublished events can be rejected");
+        }
     }
 }

@@ -34,25 +34,10 @@ public class RequestServiceImpl implements RequestService {
     public ParticipationRequestDto create(long userId, long eventId) {
         User requester = userRepository.findById(userId).orElseThrow();
         Event event = eventRepository.findById(eventId).orElseThrow();
-
-        if (requestRepository.findByRequesterIdAndEventId(userId, eventId).isPresent()) {
-            throw new DuplicateKeyException("Request already exists.");
-        }
-
-        if (userId == event.getInitiator().getId()) {
-            throw new ConditionsNotMetException("Requester can't be event initiator.");
-        }
-
-        if (event.getState() != EventState.PUBLISHED) {
-            throw new ConditionsNotMetException("Event unpublished.");
-        }
-
         Request request = new Request(0L, event, requester, RequestStatus.PENDING, LocalDateTime.now());
         long limit = event.getParticipantLimit();
 
-        if (requestRepository.countByEventIdAndStatus(eventId, RequestStatus.CONFIRMED) >= limit && limit != 0) {
-            throw new ConditionsNotMetException("Limit reached.");
-        }
+        validation(requester, event, limit);
 
         if (limit == 0) {
             request.setStatus(RequestStatus.CONFIRMED);
@@ -134,5 +119,23 @@ public class RequestServiceImpl implements RequestService {
         resultRequest.setConfirmedRequests(confirmedRequests);
         resultRequest.setRejectedRequests(rejectedRequests);
         return resultRequest;
+    }
+
+    private void validation(User user, Event event, long limit) {
+        if (requestRepository.findByRequesterIdAndEventId(user.getId(), event.getId()).isPresent()) {
+            throw new DuplicateKeyException("Request already exists.");
+        }
+
+        if (user.getId() == event.getInitiator().getId()) {
+            throw new ConditionsNotMetException("Requester can't be event initiator.");
+        }
+
+        if (event.getState() != EventState.PUBLISHED) {
+            throw new ConditionsNotMetException("Event unpublished.");
+        }
+
+        if (requestRepository.countByEventIdAndStatus(event.getId(), RequestStatus.CONFIRMED) >= limit && limit != 0) {
+            throw new ConditionsNotMetException("Limit reached.");
+        }
     }
 }
