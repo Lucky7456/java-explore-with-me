@@ -7,6 +7,7 @@ import org.springframework.transaction.annotation.Transactional;
 import ru.practicum.ewm.category.Category;
 import ru.practicum.ewm.category.CategoryRepository;
 import ru.practicum.ewm.client.stats.RestStatClient;
+import ru.practicum.ewm.comment.CommentRepository;
 import ru.practicum.ewm.dto.StatsView;
 import ru.practicum.ewm.exception.ConditionsNotMetException;
 import ru.practicum.ewm.exception.ValidationException;
@@ -28,6 +29,7 @@ public class EventServiceImpl implements EventService {
     private final EventRepository eventRepository;
     private final LocationRepository locationRepository;
     private final CategoryRepository categoryRepository;
+    private final CommentRepository commentRepository;
     private final RequestRepository requestRepository;
     private final UserRepository userRepository;
     private final RestStatClient statsClient;
@@ -39,15 +41,14 @@ public class EventServiceImpl implements EventService {
                                                      LocalDateTime start,
                                                      LocalDateTime end,
                                                      int from, int size) {
-        List<Event> events = eventRepository.findAllBy(
+        return setConfirmedRequests(eventRepository.findAllBy(
                 users,
                 states,
                 categories,
                 start == null ? LocalDateTime.now() : start,
                 end == null ? LocalDateTime.now().plusYears(1) : end,
                 PageRequest.of(from, size)
-        );
-        return setConfirmedRequests(events).stream().map(EventMapper::mapToEventFullDto).toList();
+        )).stream().map(EventMapper::mapToEventFullDto).toList();
     }
 
     @Override
@@ -130,7 +131,7 @@ public class EventServiceImpl implements EventService {
                                                     Boolean onlyAvailable,
                                                     EventSortState sort,
                                                     int from, int size) {
-        List<Event> events = eventRepository.findAllBy(
+        return sortBy(sort, fillPublicData(eventRepository.findAllBy(
                 text,
                 categories,
                 paid,
@@ -138,22 +139,7 @@ public class EventServiceImpl implements EventService {
                 end == null ? LocalDateTime.now().plusYears(100) : end,
                 onlyAvailable,
                 PageRequest.of(from, size)
-        );
-
-        Map<Long, Long> hits = getViewsToMap(setConfirmedRequests(events), true);
-        List<EventDto.Response.Public> eventsWithViews = events.stream()
-                .map(event -> EventMapper.mapToShortEventDto(event, hits.get(event.getId()))).toList();
-
-        if (sort != null) {
-            return switch (sort) {
-                case VIEWS ->
-                        eventsWithViews.stream().sorted(Comparator.comparing(EventDto.Response.Public::getViews)).toList();
-                case EVENT_DATE ->
-                        eventsWithViews.stream().sorted(Comparator.comparing(EventDto.Response.Public::getEventDate)).toList();
-            };
-        }
-
-        return eventsWithViews;
+        )));
     }
 
     @Override
@@ -163,7 +149,7 @@ public class EventServiceImpl implements EventService {
             throw new NoSuchElementException("event unpublished");
         }
         event.setConfirmedRequests(requestRepository.countByEventIdAndStatus(id, RequestStatus.CONFIRMED));
-        long views = getViewsToMap(event.getPublishedOn(), LocalDateTime.now(), List.of("/events/" + id), true)
+        long views = getViewsToMap(event.getPublishedOn(), LocalDateTime.now(), List.of("/events/" + id))
                 .getOrDefault(id, 1L);
         return EventMapper.mapToEventFullDto(event, views);
     }
@@ -200,23 +186,44 @@ public class EventServiceImpl implements EventService {
         }
     }
 
+    private List<EventDto.Response.Public> sortBy(EventSortState sort, List<EventDto.Response.Public> events) {
+        return switch (sort) {
+            case VIEWS -> events.stream().sorted(Comparator.comparing(EventDto.Response.Public::getViews)).toList();
+            case EVENT_DATE ->
+                    events.stream().sorted(Comparator.comparing(EventDto.Response.Public::getEventDate)).toList();
+            case COMMENT_COUNT ->
+                    events.stream().sorted(Comparator.comparing(EventDto.Response.Public::getCommentCount).reversed()).toList();
+            case null -> events;
+        };
+    }
+
+    private List<EventDto.Response.Public> fillPublicData(List<Event> events) {
+        Map<Long, Long> viewsMap = getViewsToMap(events);
+        Map<Long, Long> commentsMap = commentRepository.findAllByEventIdIn(events.stream().map(Event::getId).toList())
+                .stream().collect(Collectors.groupingBy(c -> c.getEvent().getId(), Collectors.counting()));
+        return setConfirmedRequests(events).stream().map(event -> EventMapper.mapToShortEventDto(event,
+                viewsMap.getOrDefault(event.getId(), 0L),
+                commentsMap.getOrDefault(event.getId(), 0L))
+        ).toList();
+    }
+
     private List<Event> setConfirmedRequests(List<Event> events) {
         Map<Long, Long> requestMap = requestRepository.findAllByEventIdInAndStatus(events.stream().map(Event::getId).toList(),
                 RequestStatus.CONFIRMED).stream().collect(Collectors.groupingBy(r -> r.getEvent().getId(), Collectors.counting()));
         return events.stream().peek(e -> e.setConfirmedRequests(requestMap.getOrDefault(e.getId(), 0L))).toList();
     }
 
-    private Map<Long, Long> getViewsToMap(List<Event> events, boolean unique) {
+    private Map<Long, Long> getViewsToMap(List<Event> events) {
         List<String> uris = events.stream().map(elem -> String.format("/events/%d", elem.getId())).toList();
         LocalDateTime startDate = events.stream().map(Event::getPublishedOn).filter(Objects::nonNull)
                 .min(LocalDateTime::compareTo).orElse(LocalDateTime.now().minusYears(10));
         LocalDateTime endDate = events.stream().map(Event::getEventDate).filter(Objects::nonNull)
                 .max(LocalDateTime::compareTo).orElse(LocalDateTime.now().plusYears(100));
-        return getViewsToMap(startDate, endDate, uris, unique);
+        return getViewsToMap(startDate, endDate, uris);
     }
 
-    private Map<Long, Long> getViewsToMap(LocalDateTime start, LocalDateTime end, List<String> uris, Boolean unique) {
-        return statsClient.getStats(start, end, uris, unique).stream().collect(
+    private Map<Long, Long> getViewsToMap(LocalDateTime start, LocalDateTime end, List<String> uris) {
+        return statsClient.getStats(start, end, uris, true).stream().collect(
                 Collectors.toMap(event -> getIdFromUri(event.getUri()), StatsView::getHits)
         );
     }

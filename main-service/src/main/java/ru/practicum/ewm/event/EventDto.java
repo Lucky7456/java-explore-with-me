@@ -89,6 +89,10 @@ public enum EventDto {
         Long getViews();
     }
 
+    public interface CommentCount {
+        Long getCommentCount();
+    }
+
     public interface UserStateAction {
         UserActionState getStateAction();
     }
@@ -149,7 +153,7 @@ public enum EventDto {
         ;
 
         @Value
-        public static class Public implements Id, Annotation, CategoryView, ConfirmedRequests, EventDate, Initiator, Paid, Title, Views {
+        public static class Public implements Id, Annotation, CategoryView, ConfirmedRequests, EventDate, Initiator, Paid, Title, Views, CommentCount {
             Long id;
             String annotation;
             CategoryDto category;
@@ -159,6 +163,7 @@ public enum EventDto {
             Boolean paid;
             String title;
             Long views;
+            Long commentCount;
         }
 
         @Value
