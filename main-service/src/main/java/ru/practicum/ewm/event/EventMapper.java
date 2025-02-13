@@ -63,7 +63,7 @@ public final class EventMapper {
         return mapToShortEventDto(event, 0L, 0L);
     }
 
-    public static EventDto.Response.Public mapToShortEventDto(Event event, Long views, Long CommentCount) {
+    public static EventDto.Response.Public mapToShortEventDto(Event event, Long views, Long commentCount) {
         return new EventDto.Response.Public(
                 event.getId(),
                 event.getAnnotation(),
@@ -74,7 +74,7 @@ public final class EventMapper {
                 event.getPaid(),
                 event.getTitle(),
                 views,
-                CommentCount
+                commentCount
         );
     }
 }

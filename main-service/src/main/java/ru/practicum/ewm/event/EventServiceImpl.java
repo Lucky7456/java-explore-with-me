@@ -8,7 +8,6 @@ import ru.practicum.ewm.category.Category;
 import ru.practicum.ewm.category.CategoryRepository;
 import ru.practicum.ewm.client.stats.RestStatClient;
 import ru.practicum.ewm.comment.CommentRepository;
-import ru.practicum.ewm.dto.StatsView;
 import ru.practicum.ewm.exception.ConditionsNotMetException;
 import ru.practicum.ewm.exception.ValidationException;
 import ru.practicum.ewm.requests.RequestRepository;
@@ -223,9 +222,11 @@ public class EventServiceImpl implements EventService {
     }
 
     private Map<Long, Long> getViewsToMap(LocalDateTime start, LocalDateTime end, List<String> uris) {
-        return statsClient.getStats(start, end, uris, true).stream().collect(
-                Collectors.toMap(event -> getIdFromUri(event.getUri()), StatsView::getHits)
-        );
+        Map<Long, Long> result = new HashMap<>();
+        statsClient.getStats(start, end, uris, true).forEach(statsView -> {
+            result.put(getIdFromUri(statsView.getUri()), statsView.getHits());
+        });
+        return result;
     }
 
     private Long getIdFromUri(String uri) {
