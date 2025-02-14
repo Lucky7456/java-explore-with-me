@@ -6,8 +6,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.practicum.ewm.category.Category;
 import ru.practicum.ewm.category.CategoryRepository;
-import ru.practicum.ewm.client.stats.RestStatClient;
+import ru.practicum.ewm.client.stats.StatsClient;
 import ru.practicum.ewm.comment.CommentRepository;
+import ru.practicum.ewm.dto.StatsViewDto;
 import ru.practicum.ewm.exception.ConditionsNotMetException;
 import ru.practicum.ewm.exception.ValidationException;
 import ru.practicum.ewm.requests.RequestRepository;
@@ -31,7 +32,7 @@ public class EventServiceImpl implements EventService {
     private final CommentRepository commentRepository;
     private final RequestRepository requestRepository;
     private final UserRepository userRepository;
-    private final RestStatClient statsClient;
+    private final StatsClient statsClient;
 
     @Override
     public List<EventDto.Response.Private> findAllBy(List<Long> users,
@@ -222,11 +223,9 @@ public class EventServiceImpl implements EventService {
     }
 
     private Map<Long, Long> getViewsToMap(LocalDateTime start, LocalDateTime end, List<String> uris) {
-        Map<Long, Long> result = new HashMap<>();
-        statsClient.getStats(start, end, uris, true).forEach(statsView -> {
-            result.put(getIdFromUri(statsView.getUri()), statsView.getHits());
-        });
-        return result;
+        return statsClient.getStats(start, end, uris, true).stream().collect(
+                Collectors.toMap(event -> getIdFromUri(event.getUri()), StatsViewDto::getHits)
+        );
     }
 
     private Long getIdFromUri(String uri) {
