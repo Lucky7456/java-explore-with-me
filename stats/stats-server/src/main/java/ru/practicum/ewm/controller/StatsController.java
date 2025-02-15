@@ -6,7 +6,7 @@ import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import ru.practicum.ewm.dto.EndpointHitDto;
-import ru.practicum.ewm.dto.StatsView;
+import ru.practicum.ewm.dto.StatsViewDto;
 import ru.practicum.ewm.exception.ValidationException;
 import ru.practicum.ewm.service.StatsService;
 
@@ -26,10 +26,10 @@ public class StatsController {
     }
 
     @GetMapping("/stats")
-    public List<StatsView> getStats(@RequestParam(required = false) @DateTimeFormat(pattern = PATTERN) LocalDateTime start,
-                                    @RequestParam(required = false) @DateTimeFormat(pattern = PATTERN) LocalDateTime end,
-                                    @RequestParam(required = false) List<String> uris,
-                                    @RequestParam(defaultValue = "false") boolean unique) {
+    public List<StatsViewDto> getStats(@RequestParam(required = false) @DateTimeFormat(pattern = PATTERN) LocalDateTime start,
+                                       @RequestParam(required = false) @DateTimeFormat(pattern = PATTERN) LocalDateTime end,
+                                       @RequestParam(required = false) List<String> uris,
+                                       @RequestParam(defaultValue = "false") boolean unique) {
         if (start == null || end == null) {
             throw new ValidationException("times should be specified");
         }
